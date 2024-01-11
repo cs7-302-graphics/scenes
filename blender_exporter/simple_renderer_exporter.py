@@ -53,7 +53,7 @@ class ExportSimpleRenderer(bpy.types.Operator, ExportHelper):
         to = origin + mat @ cam_matrix @ Vector((0, 0, -1, 0))
         up = mat @ cam_matrix @ Vector((0, 1, 0, 0))
 
-        fov = (camera.data.angle_y / math.pi) * 180
+        fov = (camera.data.angle_y / math.pi) * 180 * 1.5
 
         config_name = os.path.basename(self.filepath)
         obj_name = config_name.replace(".json", ".obj")
