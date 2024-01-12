@@ -1,6 +1,6 @@
 # Blender 4.0.1
 # www.blender.org
-mtllib scene.mtl
+mtllib scene_lo_poly.mtl
 o Cube
 v -5.716950 5.716951 -0.062694
 v -5.716950 5.716951 11.371208
