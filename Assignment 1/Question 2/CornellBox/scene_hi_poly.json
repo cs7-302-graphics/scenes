@@ -6,7 +6,7 @@
         "up": [0, 0, 1]
     },
     "output": {
-        "resolution": [512, 512]
+        "resolution": [1024, 1024]
     },
     "surface": [
         "scene_hi_poly.obj"
