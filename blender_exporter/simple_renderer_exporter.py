@@ -53,13 +53,15 @@ class ExportSimpleRenderer(bpy.types.Operator, ExportHelper):
         to = origin + mat @ cam_matrix @ Vector((0, 0, -1, 0))
         up = mat @ cam_matrix @ Vector((0, 1, 0, 0))
 
-        fov = (camera.data.angle_y / math.pi) * 180 * 1.5
+        render_settings = bpy.context.scene.render
+        fov_x = 2 * math.atan((camera.data.sensor_width / 2.0) / camera.data.lens) * 180 / math.pi
+        fov_y = (render_settings.resolution_y / render_settings.resolution_x) * fov_x
 
         config_name = os.path.basename(self.filepath)
         obj_name = config_name.replace(".json", ".obj")
         config = {
             "camera": {
-                "fieldOfView": fov,
+                "fieldOfView": fov_y,
                 "from": [origin.x, origin.y, origin.z],
                 "to": [to.x, to.y, to.z],
                 "up": [up.x, up.y, up.z]
