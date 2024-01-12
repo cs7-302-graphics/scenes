@@ -6,9 +6,9 @@
         "up": [0, 0, 1]
     },
     "output": {
-        "resolution": [1080, 1080]
+        "resolution": [1024, 1024]
     },
     "surface": [
-        "scene.obj"
+        "incorrect.obj"
     ]
 }
