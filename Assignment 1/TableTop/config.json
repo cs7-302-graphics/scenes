@@ -1,0 +1,14 @@
+{
+    "camera": {
+        "fieldOfView": 30,
+        "from": [-17, -1.4, 6.8],
+        "to": [0, 0, 0],
+        "up": [0, 0, 1]
+    },
+    "output": {
+        "resolution": [512, 512]
+    },
+    "surface": [
+        "scene.obj"
+    ]
+}
