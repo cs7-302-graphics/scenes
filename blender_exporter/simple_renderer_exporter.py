@@ -18,7 +18,7 @@ from mathutils import Vector
 bl_info = {
     'name': 'Simple Renderer Exporter',
     'author': 'Ishaan Shah',
-    'version': (0, 1),
+    'version': (0, 2),
     'blender': (3, 6, 0),
     'category': 'Import-Export',
     'location': 'File mene',
@@ -57,6 +57,35 @@ class ExportSimpleRenderer(bpy.types.Operator, ExportHelper):
         fov_x = 2 * math.atan((camera.data.sensor_width / 2.0) / camera.data.lens) * 180 / math.pi
         fov_y = (render_settings.resolution_y / render_settings.resolution_x) * fov_x
 
+        # Get all lights
+        lights = {
+            "directionalLights": [],
+            "pointLights": [],
+        }
+        for obj in bpy.data.objects:
+            # Check if the object is a light
+            if not obj.type == "LIGHT":
+                continue
+            
+            radiance = list(obj.data.color * obj.data.energy)
+            
+            # Directional lights
+            if obj.data.type == "SUN":
+                direction = mat @ obj.matrix_world @ Vector((0, 0, 1, 0))
+                lights["directionalLights"].append({
+                    "direction": [direction.x, direction.y, direction.z],
+                    "radiance": radiance
+                })
+
+            # Point lights
+            if obj.data.type == "POINT":
+                location = mat @ obj.matrix_world @ Vector((0, 0, 0, 1))
+                lights["pointLights"].append({
+                    "location": [location.x, location.y, location.z],
+                    "radiance": radiance
+                })
+
+
         config_name = os.path.basename(self.filepath)
         obj_name = config_name.replace(".json", ".obj")
         config = {
@@ -71,7 +100,8 @@ class ExportSimpleRenderer(bpy.types.Operator, ExportHelper):
             },
             "surface": [
                 obj_name
-            ]
+            ],
+            **lights
         }
 
         with open(self.filepath, "w") as f:
