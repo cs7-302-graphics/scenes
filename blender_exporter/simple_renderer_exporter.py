@@ -82,7 +82,7 @@ class ExportSimpleRenderer(bpy.types.Operator, ExportHelper):
                 location = mat @ obj.matrix_world @ Vector((0, 0, 0, 1))
                 lights["pointLights"].append({
                     "location": [location.x, location.y, location.z],
-                    "radiance": radiance
+                    "radiance": list(map(lambda x: x / math.pi, radiance))
                 })
 
 
