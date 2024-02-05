@@ -18,7 +18,7 @@ from mathutils import Vector
 bl_info = {
     'name': 'Simple Renderer Exporter',
     'author': 'Ishaan Shah',
-    'version': (0, 2),
+    'version': (0, 3),
     'blender': (3, 6, 0),
     'category': 'Import-Export',
     'location': 'File mene',
@@ -61,14 +61,15 @@ class ExportSimpleRenderer(bpy.types.Operator, ExportHelper):
         lights = {
             "directionalLights": [],
             "pointLights": [],
+            "areaLights": [],
         }
         for obj in bpy.data.objects:
             # Check if the object is a light
             if not obj.type == "LIGHT":
                 continue
-            
+
             radiance = list(obj.data.color * obj.data.energy)
-            
+
             # Directional lights
             if obj.data.type == "SUN":
                 direction = mat @ obj.matrix_world @ Vector((0, 0, 1, 0))
@@ -82,7 +83,34 @@ class ExportSimpleRenderer(bpy.types.Operator, ExportHelper):
                 location = mat @ obj.matrix_world @ Vector((0, 0, 0, 1))
                 lights["pointLights"].append({
                     "location": [location.x, location.y, location.z],
-                    "radiance": list(map(lambda x: x / math.pi, radiance))
+                    "radiance": list(map(lambda x: x / (4*math.pi), radiance))
+                })
+
+            # Area lights
+            if obj.data.type == "AREA" and obj.data.shape in ["SQUARE", "RECTANGLE"]:
+                size_x = obj.data.size
+                if obj.data.shape == "SQUARE":
+                    size_y = size_x
+                elif obj.data.shape == "RECTANGLE":
+                    size_y = obj.data.size_y
+
+                # Get area of the light to calculate radiance
+                x = size_x * obj.scale.x
+                y = size_y * obj.scale.y
+                area = x*y
+
+                # Get center of the area light and the onb defining it.
+                center = mat @ obj.matrix_world @ Vector((0, 0, 0, 1))
+                vx = mat @ obj.matrix_world @ Vector((size_x / 2, 0, 0, 0))
+                vy = mat @ obj.matrix_world @ Vector((0, size_y / 2, 0, 0))
+                n = mat @ obj.matrix_world @ Vector((0, 0, -1, 0))
+
+                lights["areaLights"].append({
+                    "center": [center.x, center.y, center.z],
+                    "vx": [vx.x, vx.y, vx.z],
+                    "vy": [vy.x, vy.y, vy.z],
+                    "normal": [n.x, n.y, n.z],
+                    "radiance": list(map(lambda x: x / (area * 4), radiance)),
                 })
 
 
@@ -131,7 +159,7 @@ def unregister():
         bpy.utils.unregister_class(cls)
 
     bpy.types.TOPBAR_MT_file_export.remove(menu_export_func)
-    
+
 # This allows you to run the script directly from Blender's Text editor
 # to test the add-on without having to install it.
 if __name__ == "__main__":
