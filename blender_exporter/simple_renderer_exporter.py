@@ -34,6 +34,8 @@ class ExportSimpleRenderer(bpy.types.Operator, ExportHelper):
     filter_glob: StringProperty(default="*.json", options={'HIDDEN'})
 
     def execute(self, context):
+        bpy.ops.object.mode_set(mode="OBJECT")
+
         # Conversion matrix to shift the "Up" Vector. This can be useful when exporting single objects to an existing mitsuba scene.
         axis_mat = axis_conversion(
 	            to_forward='X',
@@ -64,55 +66,57 @@ class ExportSimpleRenderer(bpy.types.Operator, ExportHelper):
             "areaLights": [],
         }
         for obj in bpy.data.objects:
-            # Check if the object is a light
-            if not obj.type == "LIGHT":
-                continue
+            if obj.type == "LIGHT":
+                # Export light
+                radiance = list(obj.data.color * obj.data.energy)
 
-            radiance = list(obj.data.color * obj.data.energy)
+                # Directional lights
+                if obj.data.type == "SUN":
+                    direction = mat @ obj.matrix_world @ Vector((0, 0, 1, 0))
+                    lights["directionalLights"].append({
+                        "direction": [direction.x, direction.y, direction.z],
+                        "radiance": radiance
+                    })
 
-            # Directional lights
-            if obj.data.type == "SUN":
-                direction = mat @ obj.matrix_world @ Vector((0, 0, 1, 0))
-                lights["directionalLights"].append({
-                    "direction": [direction.x, direction.y, direction.z],
-                    "radiance": radiance
-                })
+                # Point lights
+                if obj.data.type == "POINT":
+                    location = mat @ obj.matrix_world @ Vector((0, 0, 0, 1))
+                    lights["pointLights"].append({
+                        "location": [location.x, location.y, location.z],
+                        "radiance": list(map(lambda x: x / (4*math.pi), radiance))
+                    })
 
-            # Point lights
-            if obj.data.type == "POINT":
-                location = mat @ obj.matrix_world @ Vector((0, 0, 0, 1))
-                lights["pointLights"].append({
-                    "location": [location.x, location.y, location.z],
-                    "radiance": list(map(lambda x: x / (4*math.pi), radiance))
-                })
+                # Area lights
+                if obj.data.type == "AREA" and obj.data.shape in ["SQUARE", "RECTANGLE"]:
+                    size_x = obj.data.size
+                    if obj.data.shape == "SQUARE":
+                        size_y = size_x
+                    elif obj.data.shape == "RECTANGLE":
+                        size_y = obj.data.size_y
 
-            # Area lights
-            if obj.data.type == "AREA" and obj.data.shape in ["SQUARE", "RECTANGLE"]:
-                size_x = obj.data.size
-                if obj.data.shape == "SQUARE":
-                    size_y = size_x
-                elif obj.data.shape == "RECTANGLE":
-                    size_y = obj.data.size_y
+                    # Get area of the light to calculate radiance
+                    x = size_x * obj.scale.x
+                    y = size_y * obj.scale.y
+                    area = x*y
 
-                # Get area of the light to calculate radiance
-                x = size_x * obj.scale.x
-                y = size_y * obj.scale.y
-                area = x*y
+                    # Get center of the area light and the onb defining it.
+                    center = mat @ obj.matrix_world @ Vector((0, 0, 0, 1))
+                    vx = mat @ obj.matrix_world @ Vector((size_x / 2, 0, 0, 0))
+                    vy = mat @ obj.matrix_world @ Vector((0, size_y / 2, 0, 0))
+                    n = mat @ obj.matrix_world @ Vector((0, 0, -1, 0))
 
-                # Get center of the area light and the onb defining it.
-                center = mat @ obj.matrix_world @ Vector((0, 0, 0, 1))
-                vx = mat @ obj.matrix_world @ Vector((size_x / 2, 0, 0, 0))
-                vy = mat @ obj.matrix_world @ Vector((0, size_y / 2, 0, 0))
-                n = mat @ obj.matrix_world @ Vector((0, 0, -1, 0))
-
-                lights["areaLights"].append({
-                    "center": [center.x, center.y, center.z],
-                    "vx": [vx.x, vx.y, vx.z],
-                    "vy": [vy.x, vy.y, vy.z],
-                    "normal": [n.x, n.y, n.z],
-                    "radiance": list(map(lambda x: x / (area * 4), radiance)),
-                })
-
+                    lights["areaLights"].append({
+                        "center": [center.x, center.y, center.z],
+                        "vx": [vx.x, vx.y, vx.z],
+                        "vy": [vy.x, vy.y, vy.z],
+                        "normal": [n.x, n.y, n.z],
+                        "radiance": list(map(lambda x: x / (area * 4), radiance)),
+                    })
+            elif obj.type == "MESH":
+                # We only support flat shading in simple_renderer
+                # Convert all objects to flat shading
+                for poly in obj.data.polygons:
+                    poly.use_smooth = False
 
         config_name = os.path.basename(self.filepath)
         obj_name = config_name.replace(".json", ".obj")
