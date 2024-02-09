@@ -103,7 +103,7 @@ class ExportSimpleRenderer(bpy.types.Operator, ExportHelper):
                     center = mat @ obj.matrix_world @ Vector((0, 0, 0, 1))
                     vx = mat @ obj.matrix_world @ Vector((size_x / 2, 0, 0, 0))
                     vy = mat @ obj.matrix_world @ Vector((0, size_y / 2, 0, 0))
-                    n = mat @ obj.matrix_world @ Vector((0, 0, -1, 0))
+                    n = (mat @ obj.matrix_world @ Vector((0, 0, -1, 0))).normalized()
 
                     lights["areaLights"].append({
                         "center": [center.x, center.y, center.z],
